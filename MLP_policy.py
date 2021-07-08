@@ -1,22 +1,22 @@
 import torch
 
 class MLPPolicy():
-  def __init__(self, ac_dim, ob_dim, n_layers, size, learning_rate):
-    self.ac_dim = ac_dim
-    self.ob_dim = ob_dim
-    self.n_layers = n_layers
-    self.size = size
-    self.learning_rate = learning_rate
+  def __init__(self, params):
+    self.ac_dim = params["ac_dim"]
+    self.ob_dim = params["ob_dim"]
+    self.n_layers = params["n_layers"]
+    self.hidden_layer_size = params["hidden_layer_size"]
+    self.learning_rate = params["learning_rate"]
     self.device = torch.device('cpu')
 
     # MLP model
     layers = []
-    in_size = ob_dim
-    for _ in range(n_layers):
-      layers.append(torch.nn.Linear(in_size, size))
+    in_size = self.ob_dim
+    for _ in range(self.n_layers):
+      layers.append(torch.nn.Linear(in_size, self.hidden_layer_size))
       layers.append(torch.nn.ReLU())
-      in_size = size
-    layers.append(torch.nn.Linear(in_size, ac_dim))
+      in_size = self.hidden_layer_size
+    layers.append(torch.nn.Linear(in_size, self.ac_dim))
     self.logits_nn = torch.nn.Sequential(*layers).to(self.device)
     
     # Adam Optimizer
@@ -32,13 +32,13 @@ class MLPPolicy():
     return ac_distribution
 
   def update(self, trajectories):
-    # trajectories: {
-    #   "obs": [array[o1, o2, o3, ...], array[o1, o2, o3, ...], ...]
-    #   "acs": [array[a1, a2, a3, ...], array[a1, a2, a3, ...], ...]
-    #   "rewards": [array[r1, r2, r3, ...], array[r1, r2, r3, ...], ...]
-    # }
+    raise NotImplementedError
 
-    # Forward Pass
+class MLPPolicyREINFORCE(MLPPolicy):
+  def __init__(self, params):
+    super().__init__(params)
+
+  def update(self, trajectories):
     loss = torch.tensor(0, dtype=torch.float, device=self.device)
     for i in range(len(trajectories["obs"])):
       obs = trajectories["obs"][i]
@@ -50,10 +50,17 @@ class MLPPolicy():
       acs_distribution = self.get_action_distribution(obs)
       log_probs = acs_distribution.log_prob(acs_tensor)
       loss -= log_probs.sum() * rewards_tensor.sum()
-
+    
     self.optimizer.zero_grad()
     loss.backward()
     self.optimizer.step()
+
+class MLPPolicyPG(MLPPolicy):
+  def __init__(self, params):
+    super().__init__(params)
+
+  def update(self, trajectories):
+    pass
 
 
 

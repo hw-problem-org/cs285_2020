@@ -1,5 +1,10 @@
 import numpy as np
 
+# trajectory: {
+#   "obs": np.array[o1, o2, o3, ...]
+#   "acs": np.array[a1, a2, a3, ...]
+#   "rewards": np.array[r1, r2, r3, ...]
+# }
 def sample_trajectory(env, policy, max_path_length):
   obs = []
   acs = []
@@ -21,6 +26,30 @@ def sample_trajectory(env, policy, max_path_length):
   return {"obs": np.array(obs),
           "acs": np.array(acs),
           "rewards": np.array(rewards)}
+
+# trajectories: {
+#   "obs": [np.array[o1, o2, o3, ...], np.array[o1, o2, o3, ...], ...]
+#   "acs": [np.array[a1, a2, a3, ...], np.array[a1, a2, a3, ...], ...]
+#   "rewards": [np.array[r1, r2, r3, ...], np.array[r1, r2, r3, ...], ...]
+# }
+def sample_trajectories(env, policy, max_path_length, batch_size):
+  envsteps = 0
+  obs = []
+  acs = []
+  rewards = []
+  while envsteps < batch_size:
+    max_path_length_this_trajectory = min(max_path_length, batch_size - envsteps)
+    trajectory = sample_trajectory(env, policy, max_path_length_this_trajectory)
+    obs.append(trajectory["obs"])
+    acs.append(trajectory["acs"])
+    rewards.append(trajectory["rewards"])
+    envsteps += rewards[-1].shape[0]
+  
+  trajectories = {"obs": obs,
+                  "acs": acs,
+                  "rewards": rewards}
+  return trajectories
+
 
 def sample_n_trajectories(env, policy, max_path_length, n):
   obs = []
