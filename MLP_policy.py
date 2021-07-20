@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-class MLPPolicy():
+class MLPPolicyPG():
   def __init__(self, params):
     self.ac_dim = params["ac_dim"]
     self.ob_dim = params["ob_dim"]
@@ -32,80 +32,28 @@ class MLPPolicy():
     ac_distribution = torch.distributions.Categorical(logits=self.logits_nn(ob_tensor))
     return ac_distribution
 
-  def update(self, trajectories):
-    raise NotImplementedError
-
-class MLPPolicyPG(MLPPolicy):
-  def __init__(self, params):
-    super().__init__(params)
-
-    # param["variance_reduction"] can be:
-    #   - "NONE"
-    #   - "REWARD_TO_GO"
-    #   - "BASELINE"
-    #   - "BOTH"
-    self.variance_reduction = params["variance_reduction"]
-
-  def update(self, trajectories):
+  def update(self, trajectories, advantages):
     loss = torch.tensor(0, dtype=torch.float, device=self.device)
-    N = len(trajectories["obs"]) # Number of Trajectories
-
-    # Baseline Calculation
-    if self.variance_reduction == "BASELINE":
-      baseline = 0
-      for i in range(N):
-        rewards = trajectories["rewards"][i]
-        baseline += rewards.sum()
-      baseline /= N
-    elif self.variance_reduction == "BOTH":
-      baseline = []
-      ntraj_contribute = []
-      for i in range(N):
-        rewards = trajectories["rewards"][i]
-        l = rewards.shape[0] # Trajectory length
-        for j in range(l):
-          try:
-            baseline[j] += rewards[j:].sum()
-            ntraj_contribute[j] += 1
-          except IndexError:
-            baseline.append(rewards[j:].sum())
-            ntraj_contribute.append(1) 
-      baseline = np.array(baseline)
-      ntraj_contribute = np.array(ntraj_contribute)
-      baseline /= ntraj_contribute
+    N = len(trajectories["rewards"]) # Number of Trajectories
 
     for i in range(N):
       obs = trajectories["obs"][i]
+
       acs = trajectories["acs"][i]
       acs_tensor = torch.tensor(acs, dtype=torch.float, device=self.device)
-      rewards = trajectories["rewards"][i]
-      rewards_tensor = torch.tensor(rewards, dtype=torch.float, device=self.device)
 
       acs_distribution = self.get_action_distribution(obs)
       log_probs = acs_distribution.log_prob(acs_tensor)
+
+      #   "advantages": [np.array[a1, a2, a3, ...], np.array[a1, a2, a3, ...], ...]
+      advantages_tensor = torch.tensor(advantages[i], dtype=torch.float, device=self.device)
       
-      l = obs.shape[0] # Trajectory length
-      if self.variance_reduction == "NONE":
-        loss -= log_probs.sum() * rewards_tensor.sum()
-
-      elif self.variance_reduction == "REWARD_TO_GO":
-        for j in range(l):
-          rewards_togo_tensor = rewards_tensor[j:]
-          loss -= log_probs[j] * rewards_togo_tensor.sum()
-
-      elif self.variance_reduction == "BASELINE":
-        loss -= log_probs.sum() * (rewards_tensor.sum() - baseline)
-
-      elif self.variance_reduction == "BOTH":
-        for j in range(l):
-          rewards_togo_tensor = rewards_tensor[j:]
-          loss -= log_probs[j] * (rewards_togo_tensor.sum() - baseline[j])
+      loss -= torch.dot(log_probs, advantages_tensor)
 
     loss /= N
     self.optimizer.zero_grad()
     loss.backward()
     self.optimizer.step()
-
 
 
 
