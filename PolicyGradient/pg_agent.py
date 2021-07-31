@@ -1,6 +1,6 @@
 import numpy as np
-from MLP_policy import MLPPolicyPG
-from MLP_critic import MLPCritic
+from PolicyGradient.MLP_policy_PG import MLPPolicyPG
+from PolicyGradient.MLP_critic import MLPCritic
 
 # params = {"actor_params": {---}, "critic_params": {---},
 #          "baseline_enable": <Bool>}
