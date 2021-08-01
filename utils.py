@@ -73,6 +73,36 @@ def expected_rewards_sum(env, policy, max_path_length, n):
   expected_reward_sum /= n
   return expected_reward_sum
 
+class ReplayBuffer():
+  def __init__(self, max_buffer_len=1000000):
+    self.max_buffer_len = max_buffer_len
+    self.buffer_len = 0
+    self.obs = []
+    self.acs = []
+    self.next_obs = []
+    self.rews = []
+
+  def add_transition(self, ob, ac, next_ob, rew):
+    if self.buffer_len == self.max_buffer_len:
+      self.obs.pop(0)
+      self.acs.pop(0)
+      self.next_obs.pop(0)
+      self.rews.pop(0)
+    else:
+      self.buffer_len += 1
+    self.obs.append(ob)
+    self.acs.append(ac)
+    self.next_obs.append(next_ob)
+    self.rews.append(rew)
+
+  def sample_random_data(self, batch_size):
+    rand_indices = np.random.permutation(self.buffer_len)[:batch_size]
+    
+    return np.array(self.obs[rand_indices]), np.array(self.acs[rand_indices]),\
+    np.array(self.next_obs[rand_indices]), np.array(self.rews[rand_indices])
+
+
+
 
 
 
