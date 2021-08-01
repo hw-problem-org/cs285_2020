@@ -10,4 +10,5 @@
     3. [x] Policy Gradient with "Average Total Reward" baseline.
     4. [x] Policy Gradient with "Reward to Go" and "Average Reward to go" baseline.
     5. [x] Policy Gradient with Value Function Critic as baseline.
-2. DQN (Deep Q-Network)
+2. Q Learning
+    1. [ ] DDQN (i.e. Double Deep Q-Network)
